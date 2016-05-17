@@ -7,11 +7,12 @@ import re
 
 config = {
     'host':'127.0.0.1',
-    'port':3306,
+    'port':8889,
     'user':'root',
-    'password':'19860112',
+    'password':'root',
     'db':'house_bought',
-    'charset':'gb2312'
+    'charset':'gb2312',
+    'unix_socket':'/Applications/MAMP/tmp/mysql/mysql.sock'
 }
 
 present_date = datetime.now().date()
