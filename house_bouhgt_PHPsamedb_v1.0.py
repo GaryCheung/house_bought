@@ -11,7 +11,7 @@ config = {
     'user':'root',
     'password':'root',
     'db':'house_bought',
-    'charset':'gb2312',
+    'charset':'utf8',
     'unix_socket':'/Applications/MAMP/tmp/mysql/mysql.sock'
 }
 
@@ -35,11 +35,12 @@ def get_bouhgt_house(config,source):
     web_data = requests.get(url)
     soup = BeautifulSoup(web_data.text,'lxml')
     #print(soup)
-    house_pages = soup.select('body > div.wrapper > div.main-box.clear > div > div.page-box.house-lst-page-box > a')
+    house_pages = soup.select('div.c-pagination > a')
     #print(pages)
     for page in house_pages:
         if page.get_text().isdigit():
             pages = page.get_text()
+            print(pages)
         else:
             break
     url_base = 'http://sh.lianjia.com/chengjiao/'
@@ -47,32 +48,58 @@ def get_bouhgt_house(config,source):
         print('present page is------------------',page,'------------------','\n')
         more_page = 'd'+str(page)
         url = url_base + more_page
+        print(url)
         web_data = requests.get(url)
         soup = BeautifulSoup(web_data.text,'lxml')
-        house_name = soup.select('body > div.wrapper > div.main-box.clear > div > div.list-wrap > ul > li > div.info-panel > h2 > a')
-        prices_per_area = soup.select('body > div.wrapper > div.main-box.clear > div > div.list-wrap > ul > li > div.info-panel > div > div.col-2.fr > div > div:nth-of-type(2) > div')
-        bought_date = soup.select('body > div.wrapper > div.main-box.clear > div > div.list-wrap > ul > li > div.info-panel > div > div.col-2.fr > div > div:nth-of-type(1) > div')
-        prices = soup.select('body > div.wrapper > div.main-box.clear > div > div.list-wrap > ul > li > div.info-panel > div > div.col-2.fr > div > div.fr > div')
-        for name,price_per_area,date,price in zip(house_name,prices_per_area,bought_date,prices):
+        house_name = soup.select('span.cj-text')
+        #print(house_name)
+        prices_per_area = soup.select('div.info-row > div.info-col.price-item.minor')
+        #print(prices_per_area)
+        bought_date = soup.select('div.info-col.deal-item.main.strong-num')
+        #print(bought_date)
+        prices = soup.select('div.info-col.price-item.main > span.strong-num')
+        print(prices)
+        area = soup.select('div.info-row > a')
+        #print(area)
+        for name,price_per_area,date,price,areas in zip(house_name,prices_per_area,bought_date,prices,area):
             names = name.get_text()
+            print(names)
+            print(type(names))
+            #flag = '西凌新邨'
+            #print(flag)
+            #if names == flag:
+             #   print('FIND ONE!!')
+              #  continue
             #print('names',names,'-----------------','\n')
             #print('prices',prices,'---------------','\n')
-            name_layout_area = names.split(' ')
-            name = name_layout_area[0].encode('UTF-8','ignore')
-            layout = name_layout_area[1]
-            area = re.findall(r'(\w*[0-9]+\.*[0-9]+)\w*',name_layout_area[2])
-            #print(name,'---------------',layout,'---------------------',area,'-------------------','\n')
-            price_per_area = re.findall(r'(\w*[0-9]+\.*[0-9]+)\w*',price_per_area.get_text())
+            #name_layout_area = names.split(' ')
+            #print(name_layout_area)
+            #name = name_layout_area[0].encode('UTF-8','ignore')
+            areas = areas.get_text()
+            #print(areas)
+            #print(type(areas))
+            layout = re.findall(r'(\s[0-9]+\w+[0-9]+\w+)',areas)
+            #print(type(layout))
+            layout = re.findall(r'([0-9]+\w+[0-9]+\w+)',layout[0])
+            #layout = re.findall(r'([0-9]+\w+[0-9]+\w+)',layout)
+            print(layout,'@@@@@')
+            #print(areas)
+            area = re.findall(r'([0-9]+\.+[0-9]+)\w*',areas)
+            print(area)
+            #print(names,'---------------',layout[1],'---------------------',area[1],'-------------------','\n')
+            price_per_area = re.findall(r'([0-9]+\.*[0-9]+)\w*',price_per_area.get_text())
+            #print(price_per_area)
             date = date.get_text()
-            price = re.findall(r'(\w*[0-9]+\.*[0-9]+)\w*',price.get_text())
+            price = re.findall(r'(\w*[0-9]+\.*[0-9]*)\w*',price.get_text())
+            print(price)
             #print(type(price_per_area),price_per_area)
-            #print('house----------',name,layout,area,price_per_area,date,price)
+            print('house----------',names,'---',price,'----',area,'---',layout,'---',price_per_area,'---',date,'---')
             connection = pymysql.connect(**config)
             try:
                 with connection.cursor() as cursor:
                     # 执行sql语句，插入记录
                     sql = 'INSERT INTO house_bought (name, price, area, layout, source, price_per_area, bought_date, import_date) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)'
-                    cursor.execute(sql, (name, price, area, layout, source, price_per_area[0], date, present_date))
+                    cursor.execute(sql, (names, price, area, layout, source, price_per_area, date, present_date))
                     # 没有设置默认自动提交，需要主动提交，以保存所执行的语句
                 connection.commit()
             finally:
